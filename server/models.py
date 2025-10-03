@@ -1,9 +1,13 @@
+# models.py
+from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import validates
-from sqlalchemy.ext.hybrid import hybrid_property
-from app import db, bcrypt   # ✅ import from app.py, not config
+from werkzeug.security import generate_password_hash, check_password_hash
 
+db = SQLAlchemy()
+
+# ---------------- User Model ----------------
 class User(db.Model):
-    __tablename__ = "users"
+    __tablename__ = 'users'
 
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String, unique=True, nullable=False)
@@ -11,33 +15,45 @@ class User(db.Model):
     image_url = db.Column(db.String)
     bio = db.Column(db.String)
 
-    recipes = db.relationship("Recipe", back_populates="user")
+    recipes = db.relationship("Recipe", backref="user", cascade="all, delete-orphan")
 
-    @hybrid_property
+    # password property
+    @property
     def password_hash(self):
         raise AttributeError("Password hashes may not be viewed.")
 
     @password_hash.setter
     def password_hash(self, password):
-        self._password_hash = bcrypt.generate_password_hash(password).decode("utf-8")
+        self._password_hash = generate_password_hash(password)
 
     def authenticate(self, password):
-        return bcrypt.check_password_hash(self._password_hash, password)
+        return check_password_hash(self._password_hash, password)
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "username": self.username,
+            "bio": self.bio,
+            "image_url": self.image_url
+        }
 
 
+# ---------------- Recipe Model ----------------
 class Recipe(db.Model):
-    __tablename__ = "recipes"
+    __tablename__ = 'recipes'
 
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String, nullable=False)
     instructions = db.Column(db.String, nullable=False)
-    minutes_to_complete = db.Column(db.Integer, nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey("users.id"))
+    minutes_to_complete = db.Column(db.Integer)
 
-    user = db.relationship("User", back_populates="recipes")
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
 
-    @validates("instructions")
-    def validate_instructions(self, key, value):
-        if len(value) < 50:
-            raise ValueError("Instructions must be at least 50 characters long")
-        return value
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "title": self.title,
+            "instructions": self.instructions,
+            "minutes_to_complete": self.minutes_to_complete,
+            "user_id": self.user_id
+        }
