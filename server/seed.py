@@ -1,63 +1,31 @@
-#!/usr/bin/env python3
+from app import create_app, db
+from models import User, Recipe
 
-from random import randint, choice as rc
-
-from faker import Faker
-
-from app import app
-from models import db, Recipe, User
-
-fake = Faker()
+# create the app instance using the factory
+app = create_app()
 
 with app.app_context():
+    # If you really want a clean slate, uncomment these:
+    # db.drop_all()
+    # db.create_all()
 
-    print("Deleting all records...")
-    Recipe.query.delete()
-    User.query.delete()
+    # Create a user
+    u1 = User(
+        username="mike",
+        image_url="https://i.pravatar.cc/150?img=3",
+        bio="I love cooking"
+    )
+    u1.password_hash = "password123"  # will trigger your model's setter
 
-    fake = Faker()
+    # Create a recipe
+    r1 = Recipe(
+        title="Spaghetti",
+        instructions="Boil pasta, cook sauce, and mix together. Serve hot with cheese." * 3,
+        minutes_to_complete=30,
+        user=u1
+    )
 
-    print("Creating users...")
-
-    # make sure users have unique usernames
-    users = []
-    usernames = []
-
-    for i in range(20):
-        
-        username = fake.first_name()
-        while username in usernames:
-            username = fake.first_name()
-        usernames.append(username)
-
-        user = User(
-            username=username,
-            bio=fake.paragraph(nb_sentences=3),
-            image_url=fake.url(),
-        )
-
-        user.password_hash = user.username + 'password'
-
-        users.append(user)
-
-    db.session.add_all(users)
-
-    print("Creating recipes...")
-    recipes = []
-    for i in range(100):
-        instructions = fake.paragraph(nb_sentences=8)
-        
-        recipe = Recipe(
-            title=fake.sentence(),
-            instructions=instructions,
-            minutes_to_complete=randint(15,90),
-        )
-
-        recipe.user = rc(users)
-
-        recipes.append(recipe)
-
-    db.session.add_all(recipes)
-    
+    # Add and commit
+    db.session.add_all([u1, r1])
     db.session.commit()
-    print("Complete.")
+    print("✅ DB seeded!")

@@ -1,33 +1,41 @@
-#!/usr/bin/env python3
+from flask import Flask
+from flask_sqlalchemy import SQLAlchemy
+from flask_migrate import Migrate
+from flask_bcrypt import Bcrypt
+from flask_restful import Api
 
-from flask import request, session
-from flask_restful import Resource
-from sqlalchemy.exc import IntegrityError
+# initialize extensions (not bound to app yet)
+db = SQLAlchemy()
+migrate = Migrate()
+bcrypt = Bcrypt()
 
-from config import app, db, api
-from models import User, Recipe
+def create_app():
+    app = Flask(__name__)
 
-class Signup(Resource):
-    pass
+    # configure database
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///app.db'
+    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-class CheckSession(Resource):
-    pass
+    # initialize extensions with app
+    db.init_app(app)
+    migrate.init_app(app, db)
+    bcrypt.init_app(app)
 
-class Login(Resource):
-    pass
+    # set up API
+    api = Api(app)
 
-class Logout(Resource):
-    pass
+    # import models so Alembic can detect them
+    from models import User, Recipe  
 
-class RecipeIndex(Resource):
-    pass
+    # register resources here if needed
+    # from resources import UserResource, RecipeResource
+    # api.add_resource(UserResource, '/users')
+    # api.add_resource(RecipeResource, '/recipes')
 
-api.add_resource(Signup, '/signup', endpoint='signup')
-api.add_resource(CheckSession, '/check_session', endpoint='check_session')
-api.add_resource(Login, '/login', endpoint='login')
-api.add_resource(Logout, '/logout', endpoint='logout')
-api.add_resource(RecipeIndex, '/recipes', endpoint='recipes')
+    return app
 
+# expose app for flask CLI
+app = create_app()
 
 if __name__ == '__main__':
-    app.run(port=5555, debug=True)
+    app.run(debug=True, port=5555)
